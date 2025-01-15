@@ -1,12 +1,13 @@
 import os
 from flask import Flask, request, jsonify
-from gradio_client import Client, handle_file
+from gradio_client import Client
 import firebase_admin
 from firebase_admin import credentials, storage, firestore
 
 # Initialize Flask app
 app = Flask(__name__)
 
+# Initialize Firebase Admin SDK
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate({
     "type": "service_account",
@@ -21,6 +22,8 @@ cred = credentials.Certificate({
     "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mmudl%40lumethrv.iam.gserviceaccount.com",
     "universe_domain": "googleapis.com"
 })
+
+
 
 firebase_admin.initialize_app(cred, {'storageBucket': 'lumethrv.appspot.com'})
 
@@ -38,8 +41,11 @@ def process_images():
         src_image = request.files['src_image']
         ref_image = request.files['ref_image']
 
-        src_image_path = handle_file(src_image)
-        ref_image_path = handle_file(ref_image)
+        # Replace handle_file with custom file handling
+        src_image_path = f"/tmp/{src_image.filename}"
+        ref_image_path = f"/tmp/{ref_image.filename}"
+        src_image.save(src_image_path)
+        ref_image.save(ref_image_path)
 
         result = client.predict(
             src_image_path=src_image_path,

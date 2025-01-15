@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify
 from gradio_client import Client
 import firebase_admin
 from firebase_admin import credentials, storage, firestore
+from werkzeug.utils import secure_filename
+import tempfile
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,9 +25,8 @@ cred = credentials.Certificate({
     "universe_domain": "googleapis.com"
 })
 
-
-
-firebase_admin.initialize_app(cred, {'storageBucket': 'lumethrv.appspot.com'})
+# Initialize Firebase Admin SDK
+firebase_admin.initialize_app(cred, {'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET')})
 
 # Firestore client
 db = firestore.client()
@@ -41,12 +42,15 @@ def process_images():
         src_image = request.files['src_image']
         ref_image = request.files['ref_image']
 
-        # Replace handle_file with custom file handling
-        src_image_path = f"/tmp/{src_image.filename}"
-        ref_image_path = f"/tmp/{ref_image.filename}"
+        # Secure the filenames and create temp paths
+        src_image_path = os.path.join(tempfile.gettempdir(), secure_filename(src_image.filename))
+        ref_image_path = os.path.join(tempfile.gettempdir(), secure_filename(ref_image.filename))
+
+        # Save images to temporary paths
         src_image.save(src_image_path)
         ref_image.save(ref_image_path)
 
+        # Call the Gradio client to process the images
         result = client.predict(
             src_image_path=src_image_path,
             ref_image_path=ref_image_path,
@@ -63,19 +67,25 @@ def process_images():
         first_image_path = result[0] if result and len(result) > 0 else None
 
         if first_image_path:
-            src_image_ref = storage.bucket().blob(f"images/{src_image.filename}")
-            ref_image_ref = storage.bucket().blob(f"images/{ref_image.filename}")
+            # Upload images to Firebase Storage
+            src_image_ref = storage.bucket().blob(f"images/{secure_filename(src_image.filename)}")
+            ref_image_ref = storage.bucket().blob(f"images/{secure_filename(ref_image.filename)}")
             src_image_ref.upload_from_filename(src_image_path)
             ref_image_ref.upload_from_filename(ref_image_path)
 
             src_image_url = src_image_ref.public_url
             ref_image_url = ref_image_ref.public_url
 
+            # Add image URLs to Firestore
             doc_ref = db.collection('images').add({
                 'src_image_url': src_image_url,
                 'ref_image_url': ref_image_url,
                 'processed_image_url': first_image_path
             })
+
+            # Cleanup: Delete temporary image files after processing
+            os.remove(src_image_path)
+            os.remove(ref_image_path)
 
             return jsonify({
                 "first_image_url": first_image_path,

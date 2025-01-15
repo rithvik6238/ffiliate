@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_file
 from gradio_client import Client, handle_file
 import httpx
 
@@ -21,22 +21,25 @@ def predict():
             vt_repaint=False,
             api_name="/leffa_predict_vt"
         )
-        
-        # Assuming the result contains the file path or a URL to the image
-        image_path = result.get('image_path')  # Adjust based on actual response format
-        
+
+        # Assuming result is a tuple and the first element is the image path
+        if isinstance(result, tuple):
+            image_path = result[0]  # Adjust based on actual result structure
+        else:
+            image_path = result.get('image_path')  # If it's a dictionary, use get()
+
         if not image_path:
             return jsonify({"error": "Image path not found in response"}), 500
         
-        # Returning the image path or URL
-        return jsonify({"image_path": image_path})
+        # Serve the image file using send_file, assuming it's a local path or accessible path
+        return send_file(image_path, mimetype='image/png')
 
     except httpx.ProxyError as e:
         print(f"Proxy error occurred: {e}")
         return jsonify({"error": "Proxy error occurred"}), 500
     except Exception as e:
         print(f"An error occurred: {e}")
-        return jsonify({"error": "An error occurred"}), 500
+        return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

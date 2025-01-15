@@ -1,1 +1,1 @@
-gunicorn api.index:app
+gunicorn myapp:app

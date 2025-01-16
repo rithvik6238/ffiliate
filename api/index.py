@@ -1,17 +1,58 @@
-from flask import Flask, jsonify, send_file
+from flask import Flask, request, jsonify
 from gradio_client import Client, handle_file
+import firebase_admin
+from firebase_admin import credentials, storage
+import os
+import tempfile
+import mimetypes
 import httpx
 
 app = Flask(__name__)
 
-# Route to trigger the prediction and display the result
-@app.route('/predict', methods=['GET'])
-def predict():
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate("lumethrv-firebase-adminsdk-mmudl-d6ad777c3c.json")
+firebase_admin.initialize_app(cred, {
+    "storageBucket": "lumethrv.appspot.com"  # Replace with your Firebase Storage bucket name
+})
+
+# Function to upload file to Firebase Storage and get public URL
+def upload_to_firebase(file_path, file_name):
+    bucket = storage.bucket()
+    blob = bucket.blob(file_name)
+    blob.upload_from_filename(file_path)
+    blob.make_public()  # Make the file publicly accessible
+    return blob.public_url
+
+# Route to process uploaded images and return the processed image link
+@app.route('/process-image', methods=['POST'])
+def process_image():
     try:
+        # Check if the request has the file part
+        if 'src_image' not in request.files or 'ref_image' not in request.files:
+            return jsonify({"error": "Both 'src_image' and 'ref_image' are required"}), 400
+
+        src_image = request.files['src_image']
+        ref_image = request.files['ref_image']
+
+        # Get file extensions based on MIME type
+        src_extension = mimetypes.guess_extension(src_image.mimetype)
+        ref_extension = mimetypes.guess_extension(ref_image.mimetype)
+
+        if src_extension not in ['.jpg', '.jpeg', '.png'] or ref_extension not in ['.jpg', '.jpeg', '.png']:
+            return jsonify({"error": "Only .jpg, .jpeg, and .png files are supported"}), 400
+
+        # Save uploaded files to temporary files
+        src_temp = tempfile.NamedTemporaryFile(delete=False, suffix=src_extension)
+        src_image.save(src_temp.name)
+
+        ref_temp = tempfile.NamedTemporaryFile(delete=False, suffix=ref_extension)
+        ref_image.save(ref_temp.name)
+
+        # Call Gradio model with the local file paths
         client = Client("franciszzj/Leffa")
         result = client.predict(
-            src_image_path=handle_file('https://levihsu-ootdiffusion.hf.space/file=/tmp/gradio/aa9673ab8fa122b9c5cdccf326e5f6fc244bc89b/model_8.png'),
-            ref_image_path=handle_file('https://levihsu-ootdiffusion.hf.space/file=/tmp/gradio/17c62353c027a67af6f4c6e8dccce54fba3e1e43/048554_1.jpg'),
+            src_image_path=handle_file(src_temp.name),
+            ref_image_path=handle_file(ref_temp.name),
             ref_acceleration=False,
             step=30,
             scale=2.5,
@@ -24,15 +65,23 @@ def predict():
 
         # Assuming result is a tuple and the first element is the image path
         if isinstance(result, tuple):
-            image_path = result[0]  # Adjust based on actual result structure
+            processed_image_path = result[0]  # Adjust based on actual result structure
         else:
-            image_path = result.get('image_path')  # If it's a dictionary, use get()
+            processed_image_path = result.get('image_path')  # If it's a dictionary, use get()
 
-        if not image_path:
-            return jsonify({"error": "Image path not found in response"}), 500
-        
-        # Serve the image file using send_file, assuming it's a local path or accessible path
-        return send_file(image_path, mimetype='image/png')
+        if not processed_image_path:
+            return jsonify({"error": "Processed image path not found in response"}), 500
+
+        # Upload the processed image to Firebase Storage
+        file_name = os.path.basename(processed_image_path)
+        firebase_url = upload_to_firebase(processed_image_path, file_name)
+
+        # Cleanup temporary files
+        os.remove(src_temp.name)
+        os.remove(ref_temp.name)
+
+        # Return the Firebase Storage URL
+        return jsonify({"processed_image_url": firebase_url})
 
     except httpx.ProxyError as e:
         print(f"Proxy error occurred: {e}")

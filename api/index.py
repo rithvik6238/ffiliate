@@ -1,7 +1,5 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from gradio_client import Client, handle_file
-import firebase_admin
-from firebase_admin import credentials, storage
 import os
 import tempfile
 import mimetypes
@@ -9,35 +7,15 @@ import httpx
 
 app = Flask(__name__)
 
-firebase_credentials = {
-  "type": "service_account",
-  "project_id": "lumethrv",
-  "private_key_id": "d6ad777c3ce84b02adc9524771f806b670dc1387",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCPMcDfykUCvK/j\nqKmswGvdhGeblJMVQeOpYekVJ5GQyvszc0W9hIFDharKVtMxXDoPL0N6f32oufNP\nJbumy3ZmfODw4z/CvZwOkSdf53O4Ld1rI7ichIXEID8sEvU18Ll8UcotsEnOJFfa\nTnTAoMBgMLTm39bnfEL13N1G/yHKNjQYorhT01UTowkppiA/mUetu9PUe38KX6mL\nP4cteVa5Z21JjJ9vWjpAo5AoRKlhuA9v8AUD4HbjP8xHmuMJikrlLz0S7n1dHBzm\nrNJtvqxjhUskHkDruqNwxqJjTz/p3yJQszMwYiBSq7ylrZZKx/Ii9b+G7FbH7u/z\nLWKrxqYjAgMBAAECggEAOSfj06/Z8ei80EMvTswTgfzqmhgoyVBefeqd7Zq4qLHM\nqNG3IZl1Oy1saY1UiRxF9G+qIIgo8SMf8hSenUoTPX9VDfG3LpUeaFYaAFbTQs3T\n1oMQmjDvb8RrUr1ScTBf6TaAW9JE82pgQrwUMBs6DmsCmjD4h7d6xsZc8Iy/wQVe\n082ps/AHI88GNB9EjLsWogZKv8acRTKdzkdXy/tGAjrKWHVeEeOo7/KI0hzOZmfF\nspmwvqyDybM6bIykqxT4mvy/dIQZyXsgsOCtMQna019GbsQ5mO7PNeB42D+LyBpl\n4rGtPGtEeeu6afe2lMfBbDgUI/Xzb7bDZxZMTcGyiQKBgQC834th+AMPGkOCF1To\n4Rvs57laJk1ls5EPBA4i0QCrpmqIhS/wXYBBUHleCjgjrBIrM6iPm42wMZMEH5Qg\n3blMUaobN9BUHIn+c+j7N5n3DvBXOajG+SPtONV99+9C+LxmMYT332sT0FLGsY+i\nVR64Sj0ZibRooqYb1HtnWyw+9wKBgQDCFii2flKdzEu61HQRi4ega+hqpeC1WrF9\nRKABhC76Ow4Sn4x8HCO2xFjPaohVaX1B/pKasxaTeGzEtrhKLJVPkXEf7OnmOFni\nmF7EWyedvkDe6f4UcUc8XMzgftOI4TitBUfQVNhjrwog96YLt0eiim0JLskEpcvb\nN2iZox8LNQKBgQCBN5tfglNtcLWA+j9wOBpn4T1RLOVE0C5NDKQzM7R2uxslnaFn\nnECT7t+p8+nmleG0RtpqraypP7FqX8RzG96bFUAA8RWJhiDuwhRCUw72FPVfZ6ZN\nwsPOl1SQoyDBO/WBIR3si6DxZFRNdctj70JeKQRWRXz1HVnxrlRjKOBDjwKBgHjj\n/oX1VxZs6vq7XHSVOWxl6kWLftTXYdiKBzQKloxMfm6BLKsdh+1OjZbcX4D8DQYv\nQDfVtwkyKGW6/j1NWc9O42ykT+iTTwGCMP0TXjC2EYgHrbgj+uARWZe3x6Dp0DiN\nIncUchhdLezs9GM1zQvkNxhSKOmZL8oi0CdqYGrFAoGAUWJYNo8enHnch026jIi9\n8KvZUdOA2b19JyYBO0wYyuudZln+/NSXllLW+0zTmHfUzkHwSZfSuoABPVk/HIaH\nIu2uLWqxD5WxgX90pq3JS+R7Z2Vrf2hRptd6DKrRxTkaMQP73DNWBEn1c1fo8a5z\nGGJO5l8ua9zFm4ctVJEbySE=\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk-mmudl@lumethrv.iam.gserviceaccount.com",
-  "client_id": "118272570511746214100",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mmudl%40lumethrv.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+# Function to return image directly as a response with dynamic MIME type
+def send_image(file_path):
+    # Get the file extension to determine the MIME type
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if mime_type is None:
+        mime_type = 'application/octet-stream'  # Fallback if MIME type cannot be determined
+    return send_file(file_path, mimetype=mime_type)
 
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate(firebase_credentials)
-firebase_admin.initialize_app(cred, {
-    "storageBucket": "lumethrv.appspot.com"  # Replace with your Firebase Storage bucket name
-})
-
-# Function to upload file to Firebase Storage and get public URL
-def upload_to_firebase(file_path, file_name):
-    bucket = storage.bucket()
-    blob = bucket.blob(file_name)
-    blob.upload_from_filename(file_path)
-    blob.make_public()  # Make the file publicly accessible
-    return blob.public_url
-
-# Route to process uploaded images and return the processed image link
+# Route to process uploaded images and return the processed image
 @app.route('/process-image', methods=['POST'])
 def process_image():
     try:
@@ -86,16 +64,12 @@ def process_image():
         if not processed_image_path:
             return jsonify({"error": "Processed image path not found in response"}), 500
 
-        # Upload the processed image to Firebase Storage
-        file_name = os.path.basename(processed_image_path)
-        firebase_url = upload_to_firebase(processed_image_path, file_name)
-
         # Cleanup temporary files
         os.remove(src_temp.name)
         os.remove(ref_temp.name)
 
-        # Return the Firebase Storage URL
-        return jsonify({"processed_image_url": firebase_url})
+        # Return the image directly as a response
+        return send_image(processed_image_path)
 
     except httpx.ProxyError as e:
         print(f"Proxy error occurred: {e}")

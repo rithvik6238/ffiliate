@@ -10,45 +10,17 @@ import httpx
 app = Flask(__name__)
 
 firebase_credentials = {
-    "type": "service_account",
-    "project_id": "lumethrv",
-    "private_key_id": "d6ad777c3ce84b02adc9524771f806b670dc1387",
-    "private_key": """-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCPMcDfykUCvK/j
-qKmswGvdhGeblJMVQeOpYekVJ5GQyvszc0W9hIFDharKVtMxXDoPL0N6f32oufNP
-Jbumy3ZmfODw4z/CvZwOkSdf53O4Ld1rI7ichIXEID8sEvU18Ll8UcotsEnOJFfa
-TnTAoMBgMLTm39bnfEL13N1G/yHKNjQYorhT01UTowkppiA/mUetu9PUe38KX6mL
-P4cteVa5Z21JjJ9vWjpAo5AoRKlhuA9v8AUD4HbjP8xHmuMJikrlLz0S7n1dHBzm
-rNJtvqxjhUskHkDruqNwxqJjTz/p3yJQszMwYiBSq7ylrZZKx/Ii9b+G7FbH7u/z
-LWKrxqYjAgMBAAECggEAOSfj06/Z8ei80EMvTswTgfzqmhgoyVBefeqd7Zq4qLHM
-qNG3IZl1Oy1saY1UiRxF9G+qIIgo8SMf8hSenUoTPX9VDfG3LpUeaFYaAFbTQs3T
-1oMQmjDvb8RrUr1ScTBf6TaAW9JE82pgQrwUMBs6DmsCmjD4h7d6xsZc8Iy/wQVe
-082ps/AHI88GNB9EjLsWogZKv8acRTKdzkdXy/tGAjrKWHVeEeOo7/KI0hzOZmfF
-spmwvqyDybM6bIykqxT4mvy/dIQZyXsgsOCtMQna019GbsQ5mO7PNeB42D+LyBpl
-4rGtPGtEeeu6afe2lMfBbDgUI/Xzb7bDZxZMTcGyiQKBgQC834th+AMPGkOCF1To
-4Rvs57laJk1ls5EPBA4i0QCrpmqIhS/wXYBBUHleCjgjrBIrM6iPm42wMZMEH5Qg
-3blMUaobN9BUHIn+c+j7N5n3DvBXOajG+SPtONV99+9C+LxmMYT332sT0FLGsY+i
-VR64Sj0ZibRooqYb1HtnWyw+9wKBgQDCFii2flKdzEu61HQRi4ega+hqpeC1WrF9
-RKABhC76Ow4Sn4x8HCO2xFjPaohVaX1B/pKasxaTeGzEtrhKLJVPkXEf7OnmOFni
-mF7EWyedvkDe6f4UcUc8XMzgftOI4TitBUfQVNhjrwog96YLt0eiim0JLskEpcvb
-N2iZox8LNQKBgQCBN5tfglNtcLWA+j9wOBpn4T1RLOVE0C5NDKQzM7R2uxslnaFn
-nECT7t+p8+nmleG0RtpqraypP7FqX8RzG96bFUAA8RWJhiDuwhRCUw72FPVfZ6ZN
-wsPOl1SQoyDBO/WBIR3si6DxZFRNdctj70JeKQRWRXz1HVnxrlRjKOBDjwKBgHjj
-/oX1VxZs6vq7XHSVOWxl6kWLftTXYdiKBzQKloxMfm6BLKsdh+1OjZbcX4D8DQYv
-QDfVtwkyKGW6/j1NWc9O42ykT+iTTwGCMP0TXjC2EYgHrbgj+uARWZe3x6Dp0DiN
-IncUchhdLezs9GM1zQvkNxhSKOmZL8oi0CdqYGrFAoGAUWJYNo8enHnch026jIi9
-8KvZUdOA2b19JyYBO0wYyuudZln+/NSXllLW+0zTmHfUzkHwSZfSuoABPVk/HIaH
-Iu2uLWqxD5WxgX90pq3JS+R7Z2Vrf2hRptd6DKrRxTkaMQP73DNWBEn1c1fo8a5z
-GGJO5l8ua9zFm4ctVJEbySE=
------END PRIVATE KEY-----
-""",
-    "client_email": "firebase-adminsdk-mmudl@lumethrv.iam.gserviceaccount.com",
-    "client_id": "118272570511746214100",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mmudl%40lumethrv.iam.gserviceaccount.com",
-    "universe_domain": "googleapis.com"
+  "type": "service_account",
+  "project_id": "lumethrv",
+  "private_key_id": "d6ad777c3ce84b02adc9524771f806b670dc1387",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCPMcDfykUCvK/j\nqKmswGvdhGeblJMVQeOpYekVJ5GQyvszc0W9hIFDharKVtMxXDoPL0N6f32oufNP\nJbumy3ZmfODw4z/CvZwOkSdf53O4Ld1rI7ichIXEID8sEvU18Ll8UcotsEnOJFfa\nTnTAoMBgMLTm39bnfEL13N1G/yHKNjQYorhT01UTowkppiA/mUetu9PUe38KX6mL\nP4cteVa5Z21JjJ9vWjpAo5AoRKlhuA9v8AUD4HbjP8xHmuMJikrlLz0S7n1dHBzm\nrNJtvqxjhUskHkDruqNwxqJjTz/p3yJQszMwYiBSq7ylrZZKx/Ii9b+G7FbH7u/z\nLWKrxqYjAgMBAAECggEAOSfj06/Z8ei80EMvTswTgfzqmhgoyVBefeqd7Zq4qLHM\nqNG3IZl1Oy1saY1UiRxF9G+qIIgo8SMf8hSenUoTPX9VDfG3LpUeaFYaAFbTQs3T\n1oMQmjDvb8RrUr1ScTBf6TaAW9JE82pgQrwUMBs6DmsCmjD4h7d6xsZc8Iy/wQVe\n082ps/AHI88GNB9EjLsWogZKv8acRTKdzkdXy/tGAjrKWHVeEeOo7/KI0hzOZmfF\nspmwvqyDybM6bIykqxT4mvy/dIQZyXsgsOCtMQna019GbsQ5mO7PNeB42D+LyBpl\n4rGtPGtEeeu6afe2lMfBbDgUI/Xzb7bDZxZMTcGyiQKBgQC834th+AMPGkOCF1To\n4Rvs57laJk1ls5EPBA4i0QCrpmqIhS/wXYBBUHleCjgjrBIrM6iPm42wMZMEH5Qg\n3blMUaobN9BUHIn+c+j7N5n3DvBXOajG+SPtONV99+9C+LxmMYT332sT0FLGsY+i\nVR64Sj0ZibRooqYb1HtnWyw+9wKBgQDCFii2flKdzEu61HQRi4ega+hqpeC1WrF9\nRKABhC76Ow4Sn4x8HCO2xFjPaohVaX1B/pKasxaTeGzEtrhKLJVPkXEf7OnmOFni\nmF7EWyedvkDe6f4UcUc8XMzgftOI4TitBUfQVNhjrwog96YLt0eiim0JLskEpcvb\nN2iZox8LNQKBgQCBN5tfglNtcLWA+j9wOBpn4T1RLOVE0C5NDKQzM7R2uxslnaFn\nnECT7t+p8+nmleG0RtpqraypP7FqX8RzG96bFUAA8RWJhiDuwhRCUw72FPVfZ6ZN\nwsPOl1SQoyDBO/WBIR3si6DxZFRNdctj70JeKQRWRXz1HVnxrlRjKOBDjwKBgHjj\n/oX1VxZs6vq7XHSVOWxl6kWLftTXYdiKBzQKloxMfm6BLKsdh+1OjZbcX4D8DQYv\nQDfVtwkyKGW6/j1NWc9O42ykT+iTTwGCMP0TXjC2EYgHrbgj+uARWZe3x6Dp0DiN\nIncUchhdLezs9GM1zQvkNxhSKOmZL8oi0CdqYGrFAoGAUWJYNo8enHnch026jIi9\n8KvZUdOA2b19JyYBO0wYyuudZln+/NSXllLW+0zTmHfUzkHwSZfSuoABPVk/HIaH\nIu2uLWqxD5WxgX90pq3JS+R7Z2Vrf2hRptd6DKrRxTkaMQP73DNWBEn1c1fo8a5z\nGGJO5l8ua9zFm4ctVJEbySE=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-mmudl@lumethrv.iam.gserviceaccount.com",
+  "client_id": "118272570511746214100",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mmudl%40lumethrv.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
 }
 
 # Initialize Firebase Admin SDK

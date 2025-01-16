@@ -10,7 +10,7 @@ import httpx
 app = Flask(__name__)
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("api/lumethrv-firebase-adminsdk-mmudl-d6ad777c3c.json")
+cred = credentials.Certificate("api/lumethrv-firebase-adminsdk-mmudl-ce0d01503b.json")
 firebase_admin.initialize_app(cred, {
     "storageBucket": "lumethrv.appspot.com"  # Replace with your Firebase Storage bucket name
 })

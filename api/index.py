@@ -1,28 +1,19 @@
-from flask import Flask, request, jsonify
+import os
+from flask import Flask, jsonify, request
 from gradio_client import Client, handle_file
 import firebase_admin
 from firebase_admin import credentials, storage
-import os
-import tempfile
-import mimetypes
-import httpx
 
 app = Flask(__name__)
 
+# Get the absolute path of the current script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the path to the credentials file (one level up)
+credentials_path = os.path.join(current_dir, '..', 'lumethrv-firebase-adminsdk-mmudl-d6ad777c3c.json')
+
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate({
-  "type": "service_account",
-  "project_id": "lumethrv",
-  "private_key_id": "d6ad777c3ce84b02adc9524771f806b670dc1387",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCPMcDfykUCvK/j\nqKmswGvdhGeblJMVQeOpYekVJ5GQyvszc0W9hIFDharKVtMxXDoPL0N6f32oufNP\nJbumy3ZmfODw4z/CvZwOkSdf53O4Ld1rI7ichIXEID8sEvU18Ll8UcotsEnOJFfa\nTnTAoMBgMLTm39bnfEL13N1G/yHKNjQYorhT01UTowkppiA/mUetu9PUe38KX6mL\nP4cteVa5Z21JjJ9vWjpAo5AoRKlhuA9v8AUD4HbjP8xHmuMJikrlLz0S7n1dHBzm\nrNJtvqxjhUskHkDruqNwxqJjTz/p3yJQszMwYiBSq7ylrZZKx/Ii9b+G7FbH7u/z\nLWKrxqYjAgMBAAECggEAOSfj06/Z8ei80EMvTswTgfzqmhgoyVBefeqd7Zq4qLHM\nqNG3IZl1Oy1saY1UiRxF9G+qIIgo8SMf8hSenUoTPX9VDfG3LpUeaFYaAFbTQs3T\n1oMQmjDvb8RrUr1ScTBf6TaAW9JE82pgQrwUMBs6DmsCmjD4h7d6xsZc8Iy/wQVe\n082ps/AHI88GNB9EjLsWogZKv8acRTKdzkdXy/tGAjrKWHVeEeOo7/KI0hzOZmfF\nspmwvqyDybM6bIykqxT4mvy/dIQZyXsgsOCtMQna019GbsQ5mO7PNeB42D+LyBpl\n4rGtPGtEeeu6afe2lMfBbDgUI/Xzb7bDZxZMTcGyiQKBgQC834th+AMPGkOCF1To\n4Rvs57laJk1ls5EPBA4i0QCrpmqIhS/wXYBBUHleCjgjrBIrM6iPm42wMZMEH5Qg\n3blMUaobN9BUHIn+c+j7N5n3DvBXOajG+SPtONV99+9C+LxmMYT332sT0FLGsY+i\nVR64Sj0ZibRooqYb1HtnWyw+9wKBgQDCFii2flKdzEu61HQRi4ega+hqpeC1WrF9\nRKABhC76Ow4Sn4x8HCO2xFjPaohVaX1B/pKasxaTeGzEtrhKLJVPkXEf7OnmOFni\nmF7EWyedvkDe6f4UcUc8XMzgftOI4TitBUfQVNhjrwog96YLt0eiim0JLskEpcvb\nN2iZox8LNQKBgQCBN5tfglNtcLWA+j9wOBpn4T1RLOVE0C5NDKQzM7R2uxslnaFn\nnECT7t+p8+nmleG0RtpqraypP7FqX8RzG96bFUAA8RWJhiDuwhRCUw72FPVfZ6ZN\nwsPOl1SQoyDBO/WBIR3si6DxZFRNdctj70JeKQRWRXz1HVnxrlRjKOBDjwKBgHjj\n/oX1VxZs6vq7XHSVOWxl6kWLftTXYdiKBzQKloxMfm6BLKsdh+1OjZbcX4D8DQYv\nQDfVtwkyKGW6/j1NWc9O42ykT+iTTwGCMP0TXjC2EYgHrbgj+uARWZe3x6Dp0DiN\nIncUchhdLezs9GM1zQvkNxhSKOmZL8oi0CdqYGrFAoGAUWJYNo8enHnch026jIi9\n8KvZUdOA2b19JyYBO0wYyuudZln+/NSXllLW+0zTmHfUzkHwSZfSuoABPVk/HIaH\nIu2uLWqxD5WxgX90pq3JS+R7Z2Vrf2hRptd6DKrRxTkaMQP73DNWBEn1c1fo8a5z\nGGJO5l8ua9zFm4ctVJEbySE=\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk-mmudl@lumethrv.iam.gserviceaccount.com",
-  "client_id": "118272570511746214100",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mmudl%40lumethrv.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-})
+cred = credentials.Certificate(credentials_path)
 firebase_admin.initialize_app(cred, {
     "storageBucket": "lumethrv.appspot.com"  # Replace with your Firebase Storage bucket name
 })
@@ -35,36 +26,25 @@ def upload_to_firebase(file_path, file_name):
     blob.make_public()  # Make the file publicly accessible
     return blob.public_url
 
-# Route to process uploaded images and return the processed image link
+# Route to process uploaded image
 @app.route('/process-image', methods=['POST'])
 def process_image():
     try:
-        # Check if the request has the file part
-        if 'src_image' not in request.files or 'ref_image' not in request.files:
-            return jsonify({"error": "Both 'src_image' and 'ref_image' are required"}), 400
+        # Check if the image file is included in the request
+        if 'image' not in request.files:
+            return jsonify({"error": "No image file provided"}), 400
 
-        src_image = request.files['src_image']
-        ref_image = request.files['ref_image']
+        # Save the uploaded image locally
+        image = request.files['image']
+        image_path = os.path.join(current_dir, 'uploaded_image', image.filename)
+        os.makedirs(os.path.dirname(image_path), exist_ok=True)
+        image.save(image_path)
 
-        # Get file extensions based on MIME type
-        src_extension = mimetypes.guess_extension(src_image.mimetype)
-        ref_extension = mimetypes.guess_extension(ref_image.mimetype)
-
-        if src_extension not in ['.jpg', '.jpeg', '.png'] or ref_extension not in ['.jpg', '.jpeg', '.png']:
-            return jsonify({"error": "Only .jpg, .jpeg, and .png files are supported"}), 400
-
-        # Save uploaded files to temporary files
-        src_temp = tempfile.NamedTemporaryFile(delete=False, suffix=src_extension)
-        src_image.save(src_temp.name)
-
-        ref_temp = tempfile.NamedTemporaryFile(delete=False, suffix=ref_extension)
-        ref_image.save(ref_temp.name)
-
-        # Call Gradio model with the local file paths
+        # Call the Gradio model for prediction
         client = Client("franciszzj/Leffa")
         result = client.predict(
-            src_image_path=handle_file(src_temp.name),
-            ref_image_path=handle_file(ref_temp.name),
+            src_image_path=handle_file(image_path),
+            ref_image_path=handle_file(image_path),  # Replace with actual reference image logic
             ref_acceleration=False,
             step=30,
             scale=2.5,
@@ -75,29 +55,22 @@ def process_image():
             api_name="/leffa_predict_vt"
         )
 
-        # Assuming result is a tuple and the first element is the image path
+        # Assuming result contains the processed image path
         if isinstance(result, tuple):
             processed_image_path = result[0]  # Adjust based on actual result structure
         else:
-            processed_image_path = result.get('image_path')  # If it's a dictionary, use get()
+            processed_image_path = result.get('image_path')
 
         if not processed_image_path:
             return jsonify({"error": "Processed image path not found in response"}), 500
 
         # Upload the processed image to Firebase Storage
-        file_name = os.path.basename(processed_image_path)
-        firebase_url = upload_to_firebase(processed_image_path, file_name)
+        processed_file_name = os.path.basename(processed_image_path)
+        firebase_url = upload_to_firebase(processed_image_path, processed_file_name)
 
-        # Cleanup temporary files
-        os.remove(src_temp.name)
-        os.remove(ref_temp.name)
-
-        # Return the Firebase Storage URL
+        # Return the Firebase Storage URL of the processed image
         return jsonify({"processed_image_url": firebase_url})
 
-    except httpx.ProxyError as e:
-        print(f"Proxy error occurred: {e}")
-        return jsonify({"error": "Proxy error occurred"}), 500
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({"error": "An error occurred", "details": str(e)}), 500

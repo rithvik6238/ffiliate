@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from gradio_client import Client, handle_file
+import firebase_admin
+from firebase_admin import credentials, storage
 import os
 import tempfile
 import mimetypes
@@ -7,15 +9,21 @@ import httpx
 
 app = Flask(__name__)
 
-# Function to return image directly as a response with dynamic MIME type
-def send_image(file_path):
-    # Get the file extension to determine the MIME type
-    mime_type, _ = mimetypes.guess_type(file_path)
-    if mime_type is None:
-        mime_type = 'application/octet-stream'  # Fallback if MIME type cannot be determined
-    return send_file(file_path, mimetype=mime_type)
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate("api/lumethrv-firebase-adminsdk-mmudl-d6ad777c3c.json")
+firebase_admin.initialize_app(cred, {
+    "storageBucket": "lumethrv.appspot.com"  # Replace with your Firebase Storage bucket name
+})
 
-# Route to process uploaded images and return the processed image
+# Function to upload file to Firebase Storage and get public URL
+def upload_to_firebase(file_path, file_name):
+    bucket = storage.bucket()
+    blob = bucket.blob(file_name)
+    blob.upload_from_filename(file_path)
+    blob.make_public()  # Make the file publicly accessible
+    return blob.public_url
+
+# Route to process uploaded images and return the processed image link
 @app.route('/process-image', methods=['POST'])
 def process_image():
     try:
@@ -64,12 +72,16 @@ def process_image():
         if not processed_image_path:
             return jsonify({"error": "Processed image path not found in response"}), 500
 
+        # Upload the processed image to Firebase Storage
+        file_name = os.path.basename(processed_image_path)
+        firebase_url = upload_to_firebase(processed_image_path, file_name)
+
         # Cleanup temporary files
         os.remove(src_temp.name)
         os.remove(ref_temp.name)
 
-        # Return the image directly as a response
-        return send_image(processed_image_path)
+        # Return the Firebase Storage URL
+        return jsonify({"processed_image_url": firebase_url})
 
     except httpx.ProxyError as e:
         print(f"Proxy error occurred: {e}")

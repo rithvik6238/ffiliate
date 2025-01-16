@@ -1,27 +1,31 @@
 from flask import Flask, request, jsonify
 from gradio_client import Client, handle_file
-import firebase_admin
-from firebase_admin import credentials, storage
-import os
 import tempfile
 import mimetypes
+import os
 import httpx
 
 app = Flask(__name__)
 
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate("api/lumethrv-firebase-adminsdk-mmudl-ce0d01503b.json")
-firebase_admin.initialize_app(cred, {
-    "storageBucket": "lumethrv.appspot.com"  # Replace with your Firebase Storage bucket name
-})
+# Replace with your Imgbb API key
+IMGBB_API_KEY = "df5461c520f518a4417bd57a8446453b"  # Replace with your Imgbb API key
 
-# Function to upload file to Firebase Storage and get public URL
-def upload_to_firebase(file_path, file_name):
-    bucket = storage.bucket()
-    blob = bucket.blob(file_name)
-    blob.upload_from_filename(file_path)
-    blob.make_public()  # Make the file publicly accessible
-    return blob.public_url
+
+# Function to upload file to Imgbb and get public URL
+def upload_to_imgbb(file_path):
+    url = "https://api.imgbb.com/1/upload"
+    with open(file_path, "rb") as file:
+        files = {"image": file}
+        data = {"key": IMGBB_API_KEY}
+        response = httpx.post(url, data=data, files=files)
+        response_json = response.json()
+
+        if response.status_code == 200 and response_json.get("success"):
+            # Extract the image URL from the response
+            return response_json["data"]["url"]
+        else:
+            raise Exception(f"Failed to upload to Imgbb: {response_json.get('error', 'Unknown error')}")
+
 
 # Route to process uploaded images and return the processed image link
 @app.route('/process-image', methods=['POST'])
@@ -65,23 +69,22 @@ def process_image():
 
         # Assuming result is a tuple and the first element is the image path
         if isinstance(result, tuple):
-            processed_image_path = result[0]  # Adjust based on actual result structure
+            processed_image_path = result[0]
         else:
-            processed_image_path = result.get('image_path')  # If it's a dictionary, use get()
+            processed_image_path = result.get('image_path')
 
         if not processed_image_path:
             return jsonify({"error": "Processed image path not found in response"}), 500
 
-        # Upload the processed image to Firebase Storage
-        file_name = os.path.basename(processed_image_path)
-        firebase_url = upload_to_firebase(processed_image_path, file_name)
+        # Upload the processed image to Imgbb
+        imgbb_url = upload_to_imgbb(processed_image_path)
 
         # Cleanup temporary files
         os.remove(src_temp.name)
         os.remove(ref_temp.name)
 
-        # Return the Firebase Storage URL
-        return jsonify({"processed_image_url": firebase_url})
+        # Return the Imgbb URL
+        return jsonify({"processed_image_url": imgbb_url})
 
     except httpx.ProxyError as e:
         print(f"Proxy error occurred: {e}")
@@ -89,6 +92,7 @@ def process_image():
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

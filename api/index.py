@@ -33,7 +33,7 @@ def process_image():
             return jsonify({"error": "Both 'src_image_url' and 'target_image_url' are required"}), 400
 
         # Call the Gradio client with the provided URLs
-        client = Client("tuan2308/face-swap")
+        client = Client("tuan2308/face-swap", hf_token="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")
         result = client.predict(
             source_file=handle_file(src_image_url),
             target_file=handle_file(target_image_url),

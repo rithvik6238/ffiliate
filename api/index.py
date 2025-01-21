@@ -1,11 +1,33 @@
 from flask import Flask, request, jsonify
 from gradio_client import Client, handle_file
 import httpx
+import random
 
 app = Flask(__name__)
 
 # Replace with your Imgbb API key
 IMGBB_API_KEY = "7050e5baffd948245c4f630ba8f66e0a"
+
+# List of HF API keys
+hfApiKeys = [
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+    "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",
+]
 
 # Function to upload file to Imgbb and get public URL
 def upload_to_imgbb(image_path):
@@ -32,8 +54,11 @@ def process_image():
         if not src_image_url or not target_image_url:
             return jsonify({"error": "Both 'src_image_url' and 'target_image_url' are required"}), 400
 
-        # Call the Gradio client with the provided URLs
-        client = Client("tuan2308/face-swap", hf_token="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")
+        # Choose a random HF token from the list
+        random_hf_token = random.choice(hfApiKeys)
+
+        # Call the Gradio client with the random token
+        client = Client("tuan2308/face-swap", hf_token=random_hf_token)
         result = client.predict(
             source_file=handle_file(src_image_url),
             target_file=handle_file(target_image_url),

@@ -4,4 +4,5 @@ gradio-client==1.5.4
 gunicorn==23.0.0
 firebase-admin==6.0.0
 httpx==0.28.1
-requests
+requests==2.32.3
+

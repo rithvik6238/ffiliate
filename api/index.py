@@ -1,86 +1,35 @@
 from flask import Flask, request, jsonify
-from gradio_client import Client, handle_file
-import httpx
-import random
+from gradio_client import Client
 
 app = Flask(__name__)
 
-# Replace with your Imgbb API key
-IMGBB_API_KEY = "7050e5baffd948245c4f630ba8f66e0a"
+# Initialize Gradio client with the model
+client = Client("vantexidprvt/facebook-bart-large-mnli")
 
-# List of HF API keys
-hfApiKeys = [
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-    "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",
-]
+@app.route('/predict', methods=['POST'])
+def predict():
+    # Get the 'param_0' value from the user input
+    param_0 = request.json.get('param_0', '')
 
-# Function to upload file to Imgbb and get public URL
-def upload_to_imgbb(image_path):
-    url = "https://api.imgbb.com/1/upload"
-    with open(image_path, "rb") as file:
-        files = {"image": file}
-        data = {"key": IMGBB_API_KEY}
-        response = httpx.post(url, data=data, files=files)
-        response_json = response.json()
+    # The other params (param_1 and param_2) are predefined
+    param_1 = "chatting , giving beauty solutions,  giving beauty suggestions , giving body building solutions ,giving body building suggestions , giving  diet plan  suggestions"
+    param_2 = False
 
-        if response.status_code == 200 and response_json.get("success"):
-            return response_json["data"]["url"]
-        else:
-            raise Exception(f"Failed to upload to Imgbb: {response_json.get('error', 'Unknown error')}")
+    # Call the Gradio client predict method
+    result = client.predict(
+        param_0=param_0,
+        param_1=param_1,
+        param_2=param_2,
+        api_name="/predict"
+    )
 
-# Route to process images using the Gradio API
-@app.route('/process-image', methods=['POST'])
-def process_image():
-    try:
-        # Get source and target image URLs from the request
-        src_image_url = request.json.get('src_image_url')
-        target_image_url = request.json.get('target_image_url')
-
-        if not src_image_url or not target_image_url:
-            return jsonify({"error": "Both 'src_image_url' and 'target_image_url' are required"}), 400
-
-        # Choose a random HF token from the list
-        random_hf_token = random.choice(hfApiKeys)
-
-        # Call the Gradio client with the random token
-        client = Client("tuan2308/face-swap", hf_token=random_hf_token)
-        result = client.predict(
-            source_file=handle_file(src_image_url),
-            target_file=handle_file(target_image_url),
-            doFaceEnhancer=False,
-            api_name="/predict"
-        )
-
-        # Assuming the result contains the processed image path
-        processed_image_path = result if isinstance(result, str) else None
-
-        if not processed_image_path:
-            return jsonify({"error": "Processed image path not found in response"}), 500
-
-        # Upload the processed image to Imgbb
-        imgbb_url = upload_to_imgbb(processed_image_path)
-
-        # Return the Imgbb URL
-        return jsonify({"processed_image_url": imgbb_url})
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return jsonify({"error": "An error occurred", "details": str(e)}), 500
+    # Extract the highest confidence label from the result
+    confidences = result.get('confidences', [])
+    if confidences:
+        highest_confidence = max(confidences, key=lambda x: x.get('confidence', 0))
+        return jsonify({'label': highest_confidence['label']})
+    else:
+        return jsonify({'error': 'No confidences found in the result'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)

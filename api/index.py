@@ -100,12 +100,11 @@ def get_affiliate_products():
         print(f"Error in AI prediction: {e}")
         return jsonify({"error": "AI prediction failed"}), 500
 
-    # Extract relevant JSON response
+    # Directly parse the JSON response part (no regex needed)
     try:
-        json_part = re.search(r'```json\n(.*?)```', response[1][0][1], re.DOTALL).group(1)
-        text = json.loads(json_part)
-    except (IndexError, AttributeError, json.JSONDecodeError) as e:
-        print("Error extracting JSON:", e)
+        text = json.loads(response[1][0][1])
+    except (IndexError, json.JSONDecodeError) as e:
+        print("Error parsing JSON:", e)
         print("Full response:", response)  # Log the full response for debugging
         return jsonify({"error": "Invalid AI response format"}), 500
 

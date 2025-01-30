@@ -1,7 +1,7 @@
 import json
 import re
 import requests
-from app import Flask, request, jsonify
+from flask import Flask, request, jsonify
 from gradio_client import Client
 
 app = Flask(__name__)
@@ -80,21 +80,25 @@ def get_affiliate_products():
     query = data.get("query", "")
 
     # Fetch AI-generated response
-    response = client.predict(
-        query=query,
-        history=[],
-        system=""" based on the user input suggest the products from Amazon available in the market return in json 
-        example: 
-        {
-            "category": [
-                {
-                    "product_name": "Example Product",
-                    "short_description": "Example Description"
-                }
-            ]
-        }""",
-        api_name="/model_chat_1"
-    )
+    try:
+        response = client.predict(
+            query=query,
+            history=[],
+            system=""" based on the user input suggest the products from Amazon available in the market return in json 
+            example: 
+            {
+                "category": [
+                    {
+                        "product_name": "Example Product",
+                        "short_description": "Example Description"
+                    }
+                ]
+            }""",
+            api_name="/model_chat_1"
+        )
+    except Exception as e:
+        print(f"Error in AI prediction: {e}")
+        return jsonify({"error": "AI prediction failed"}), 500
 
     # Extract relevant JSON response
     try:
@@ -102,6 +106,7 @@ def get_affiliate_products():
         text = json.loads(json_part)
     except (IndexError, AttributeError, json.JSONDecodeError) as e:
         print("Error extracting JSON:", e)
+        print("Full response:", response)  # Log the full response for debugging
         return jsonify({"error": "Invalid AI response format"}), 500
 
     # Extract headings
@@ -143,5 +148,5 @@ def get_affiliate_products():
 
     return jsonify(results)
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
     app.run(debug=True)

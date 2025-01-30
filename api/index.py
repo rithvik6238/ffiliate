@@ -1,7 +1,7 @@
 import json
 import re
 import requests
-from flask import Flask, request, jsonify
+from app import Flask, request, jsonify
 from gradio_client import Client
 
 app = Flask(__name__)
@@ -15,7 +15,7 @@ def extract_asin(url):
     match = re.search(r"/dp/([A-Z0-9]+)", url)
     return match.group(1) if match else None
 
-# Function to extract headings from dictionary
+# Function to extract headings from JSON response
 def extract_headings(text_dict):
     return list(text_dict.keys())
 
@@ -29,10 +29,10 @@ def google_image_search(query, api_key, cx, fallback_search=False):
         "searchType": "image",
         "num": 3
     }
-
+    
     response = requests.get(url, params=params)
     search_results = []
-
+    
     if response.status_code == 200:
         results = response.json()
         found_amazon = False
@@ -42,11 +42,12 @@ def google_image_search(query, api_key, cx, fallback_search=False):
                 search_results.append({
                     "title": item['title'],
                     "image_link": image_link,
-                    "context_link": item.get('image', {}).get('contextLink', "")
+                    "context_link": item['image']['contextLink']
                 })
                 found_amazon = True
                 break
-
+        
+        # If no Amazon image found and fallback is enabled, search for Flipkart
         if not found_amazon and fallback_search:
             print(f"Amazon image not found, searching on Flipkart...")
             params["q"] = f"{query} site:flipkart.com"
@@ -57,73 +58,88 @@ def google_image_search(query, api_key, cx, fallback_search=False):
                     search_results.append({
                         "title": item['title'],
                         "image_link": item['link'],
-                        "context_link": item.get('image', {}).get('contextLink', "")
+                        "context_link": item['image']['contextLink']
                     })
     else:
         print(f"Error: {response.status_code}, {response.text}")
-
+    
     return search_results
+
+# Initialize the client
+client = Client("Qwen/Qwen2-72B-Instruct")
 
 @app.route('/get_affiliate_products', methods=['POST'])
 def get_affiliate_products():
-    data = request.json
+    # Read JSON request data
+    data = request.get_json()
+    print("Received Request Data:", data)  # Debugging log
+
+    if not data or "query" not in data:
+        return jsonify({"error": "Invalid JSON or missing 'query' field"}), 400
+
     query = data.get("query", "")
 
-    client = Client("Qwen/Qwen2-72B-Instruct")
-
+    # Fetch AI-generated response
     response = client.predict(
         query=query,
         history=[],
-        system="""{
+        system=""" based on the user input suggest the products from Amazon available in the market return in json 
+        example: 
+        {
             "category": [
                 {
-                    "product_name": "",
-                    "short_description": ""
+                    "product_name": "Example Product",
+                    "short_description": "Example Description"
                 }
             ]
         }""",
         api_name="/model_chat_1"
     )
 
-    # Extract the relevant string from response
+    # Extract relevant JSON response
     try:
-        string = response[1][0][1]
-        json_part = re.search(r'```json\n(.*?)```', string, re.DOTALL)
-        if json_part:
-            json_data = json.loads(json_part.group(1))
-        else:
-            return jsonify({"error": "Invalid response format"}), 400
-    except (IndexError, KeyError, json.JSONDecodeError):
-        return jsonify({"error": "Failed to extract JSON"}), 400
+        json_part = re.search(r'```json\n(.*?)```', response[1][0][1], re.DOTALL).group(1)
+        text = json.loads(json_part)
+    except (IndexError, AttributeError, json.JSONDecodeError) as e:
+        print("Error extracting JSON:", e)
+        return jsonify({"error": "Invalid AI response format"}), 500
 
-    headings = extract_headings(json_data)
+    # Extract headings
+    headings = extract_headings(text)
 
+    # Set API keys for Google Search
     API_KEY = "AIzaSyBOPWyQKGuSARQCAxFMpE8VHWW1qJ8hV7s"
     CX = "000c0d4dcdc184f06"
 
+    # Perform image search and generate affiliate links
     results = []
-    for category in json_data:
-        for product in json_data[category]:
+    for category in text:
+        category_results = []
+        for product in text[category]:
             product_name = product["product_name"]
-            query = f"{product_name} site:amazon.in"
-            search_results = google_image_search(query, API_KEY, CX, fallback_search=True)
-
-            product_info = {
-                "product_name": product_name,
-                "images": []
-            }
+            search_query = f"{product_name} site:amazon.in"
+            search_results = google_image_search(search_query, API_KEY, CX, fallback_search=True)
 
             if search_results:
                 for result in search_results:
                     asin = extract_asin(result['context_link'])
                     affiliate_link = generate_affiliate_link(asin) if asin else result['context_link']
 
-                    product_info["images"].append({
-                        "title": result['title'],
+                    category_results.append({
+                        "product_name": product_name,
+                        "image_title": result['title'],
                         "image_link": result['image_link'],
                         "affiliate_link": affiliate_link
                     })
-            results.append(product_info)
+            else:
+                category_results.append({
+                    "product_name": product_name,
+                    "image_title": "No Image Found",
+                    "image_link": "",
+                    "affiliate_link": ""
+                })
+        
+        results.append({category: category_results})
 
     return jsonify(results)
 
